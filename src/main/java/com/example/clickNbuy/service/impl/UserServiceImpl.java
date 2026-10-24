@@ -40,7 +40,9 @@ public class UserServiceImpl implements UserService {
 			return "register.html";
 		else {
 			int otp = new Random().nextInt(100000, 1000000);
-			OtpSender.sendOtpThruEmail(userDto.getEmail(), otp, userDto.getName());
+			otpSender.sendOtpThruEmail(
+				    userDto.getEmail(), otp, userDto.getName()
+				);
 			otpSender.sendOtpThruMobile(userDto.getMobile(), otp, userDto.getName());
 			User user = new User(null, userDto.getName(), userDto.getEmail(), encoder.encode(userDto.getPassword()),
 					userDto.getMobile(), userDto.getGender(), otp, false);
