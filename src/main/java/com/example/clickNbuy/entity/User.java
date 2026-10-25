@@ -1,5 +1,9 @@
 package com.example.clickNbuy.entity;
 
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -29,5 +33,9 @@ public class User {
 	private String gender;
 	private int otp;
 	private boolean verified;
+	private String role;
+	@CreationTimestamp
+	private LocalDateTime createdTime;
+	
 
 }
