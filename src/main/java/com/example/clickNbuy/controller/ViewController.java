@@ -25,8 +25,5 @@ public class ViewController {
         return "register";
     }
     
-    @RequestMapping("/home")
-	public String loadCustomerHome() {
-		return "customer-home.html";
-	}
+   
 }
