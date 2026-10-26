@@ -1,6 +1,6 @@
 
 package com.example.clickNbuy.util;
-
+import com.twilio.rest.verify.v2.service.Verification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -51,9 +51,25 @@ public class OtpSender {
 
     public void sendOtpThruMobile(Long mobile, int otp, String name) {
 
-    	Twilio.init(System.getenv("TWILIO_ACCOUNT_SID"), System.getenv("TWILIO_AUTH_TOKEN"));
+        String accountSid = System.getenv("TWILIO_ACCOUNT_SID");
+        String authToken = System.getenv("TWILIO_AUTH_TOKEN");
+        String serviceSid = System.getenv("TWILIO_VERIFY_SERVICE_SID");
 
-		Message.creator(new PhoneNumber("+91" + mobile), new PhoneNumber(System.getenv("TWILIO_MOBILE")),
-				"Hello " + name + " Thanks for creating account your OTP is " + otp).create();
+        if (accountSid == null || authToken == null || serviceSid == null) {
+            throw new IllegalStateException(
+                    "Twilio environment variables are missing");
+        }
+
+        Twilio.init(accountSid, authToken);
+
+        String phoneNumber = "+91" + mobile;
+
+        try {
+            Verification.creator(serviceSid, phoneNumber, "sms").create();
+        } catch (com.twilio.exception.ApiException e) {
+            System.err.println("Twilio error code: " + e.getCode());
+            System.err.println("Twilio error message: " + e.getMessage());
+            throw e;
+        }
     }
 }
