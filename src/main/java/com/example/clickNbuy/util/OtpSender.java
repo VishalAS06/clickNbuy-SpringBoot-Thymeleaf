@@ -24,52 +24,31 @@ public class OtpSender {
     TemplateEngine templateEngine;
 
     public void sendOtpThruEmail(String email, int otp, String name) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper =
-                    new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom("noreply@clicknbuy.com", "Clicknbuy");
-            helper.setTo(email);
-            helper.setSubject("OTP for Creating Account with ClickNBuy");
-
-            Context context = new Context();
-            context.setVariable("name", name);
-            context.setVariable("otp", otp);
-
-            String emailMessage = templateEngine.process(
-                    "email-template.html", context);
-
-            helper.setText(emailMessage, true);
-            mailSender.send(message);
-
-        } catch (Exception e) {
-            throw new IllegalStateException(
-                    "Failed to send OTP email", e);
-        }
-    }
+		MimeMessage message = mailSender.createMimeMessage();
+		MimeMessageHelper helper = new MimeMessageHelper(message);
+		try {
+			helper.setFrom("noreply@clicknbuy.com", "Clicknbuy");
+			helper.setTo(email);
+			helper.setSubject("Otp for Creating account with ClickNBuy");
+			Context context = new Context();
+			context.setVariable("name", name);
+			context.setVariable("otp", otp);
+			String emailMessage = templateEngine.process("email-template.html", context);
+			helper.setText(emailMessage, true);
+			mailSender.send(message);
+		} catch (Exception e) {
+			System.err.println("The OTP is : " + otp);
+		}
+	}
 
     public void sendOtpThruMobile(Long mobile, int otp, String name) {
 
-        String accountSid = System.getenv("TWILIO_ACCOUNT_SID");
-        String authToken = System.getenv("TWILIO_AUTH_TOKEN");
-        String serviceSid = System.getenv("TWILIO_VERIFY_SERVICE_SID");
-
-        if (accountSid == null || authToken == null || serviceSid == null) {
-            throw new IllegalStateException(
-                    "Twilio environment variables are missing");
-        }
-
-        Twilio.init(accountSid, authToken);
-
-        String phoneNumber = "+91" + mobile;
-
-        try {
-            Verification.creator(serviceSid, phoneNumber, "sms").create();
-        } catch (com.twilio.exception.ApiException e) {
-            System.err.println("Twilio error code: " + e.getCode());
-            System.err.println("Twilio error message: " + e.getMessage());
-            throw e;
-        }
-    }
+    	try {
+			Twilio.init(System.getenv("TWILIO_ACCOUNT_SID"), System.getenv("TWILIO_AUTH_TOKEN"));
+			Message.creator(new PhoneNumber("+91" + mobile), new PhoneNumber(System.getenv("TWILIO_MOBILE")),
+					"Hello " + name + " Thanks for creating account your OTP is " + otp).create();
+		} catch (Exception e) {
+			System.err.println("The OTP is : " + otp);
+		}
+	}
 }

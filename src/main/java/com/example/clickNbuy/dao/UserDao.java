@@ -1,5 +1,5 @@
 package com.example.clickNbuy.dao;
-
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -25,6 +25,10 @@ public class UserDao {
 
 	public User findById(Long id) {
 		return userRepository.findById(id).orElseThrow();
+	}
+	
+	public Optional<User> findByEmail(String email) {
+		return userRepository.findByEmail(email);
 	}
 	
 
