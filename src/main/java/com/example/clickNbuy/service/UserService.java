@@ -1,5 +1,8 @@
 package com.example.clickNbuy.service;
 import jakarta.servlet.http.HttpSession;
+
+import java.security.Principal;
+
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
 
@@ -19,6 +22,10 @@ public interface UserService {
 	String forgotPassword(String email, HttpSession session);
 
 	String resetPassword(PasswordDto passwordDto, BindingResult result, HttpSession session, Long id,ModelMap map);
+
+	String addToCart(Long id, HttpSession session, Principal principal);
+
+	String viewCart(HttpSession session, Principal principal, ModelMap map);
 	
 
 	

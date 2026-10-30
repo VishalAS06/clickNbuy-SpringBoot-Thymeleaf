@@ -2,6 +2,7 @@ package com.example.clickNbuy.entity;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -24,7 +25,7 @@ public class Product {
 	private String description;
 	private String imageLink;
 	private String category;
-	@CreationTimestamp
+	@UpdateTimestamp
 	private LocalDateTime createdTime;
 
 }
