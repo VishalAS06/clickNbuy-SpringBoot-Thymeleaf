@@ -26,6 +26,10 @@ public interface UserService {
 	String addToCart(Long id, HttpSession session, Principal principal);
 
 	String viewCart(HttpSession session, Principal principal, ModelMap map);
+
+	String increase(HttpSession session, Long id, ModelMap map);
+
+	String decrease(HttpSession session, Long id, ModelMap map);
 	
 
 	

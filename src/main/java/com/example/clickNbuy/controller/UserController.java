@@ -51,13 +51,23 @@ public class UserController {
 	}
 	
 	@GetMapping("/user/add-cart/{id}")
-	public String addToCart(@PathVariable Long id, HttpSession session,Principal principal) {
-		return userService.addToCart(id, session,principal);
+	public String addToCart(@PathVariable Long id, HttpSession session, Principal principal) {
+		return userService.addToCart(id, session, principal);
 	}
 	
 	@GetMapping("/user/cart")
-	public String viewCart(HttpSession session,Principal principal, ModelMap map) {
-		return userService.viewCart(session,principal,map);
+	public String viewCart(HttpSession session, Principal principal, ModelMap map) {
+		return userService.viewCart(session, principal, map);
+	}
+
+	@GetMapping("/user/cart/increase/{id}")
+	public String increase(@PathVariable Long id, HttpSession session,ModelMap map) {
+		return userService.increase(session, id, map);
+	}
+	
+	@GetMapping("/user/cart/decrease/{id}")
+	public String decrease(@PathVariable Long id, HttpSession session,ModelMap map) {
+		return userService.decrease(session, id, map);
 	}
 
 }
