@@ -13,6 +13,8 @@ import com.example.clickNbuy.repository.ProductRepository;
 import com.example.clickNbuy.service.AdminService;
 import com.example.clickNbuy.util.CloudinaryHelper;
 
+
+@Service
 public class AdminServiceImpl implements AdminService {
 
 		@Autowired

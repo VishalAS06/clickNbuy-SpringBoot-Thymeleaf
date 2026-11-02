@@ -2,6 +2,7 @@
 package com.example.clickNbuy.util;
 import com.twilio.rest.verify.v2.service.Verification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,13 @@ import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class OtpSender {
+	
+	@Value("${TWILIO_ACCOUNT_SID}")
+	String TWILIO_ACCOUNT_SID;
+	@Value("${TWILIO_AUTH_TOKEN}")
+	String TWILIO_AUTH_TOKEN;
+	@Value("${TWILIO_MOBILE}")
+	String TWILIO_MOBILE;
 
     @Autowired
     JavaMailSender mailSender;
@@ -44,8 +52,8 @@ public class OtpSender {
     public void sendOtpThruMobile(Long mobile, int otp, String name) {
 
     	try {
-			Twilio.init(System.getenv("TWILIO_ACCOUNT_SID"), System.getenv("TWILIO_AUTH_TOKEN"));
-			Message.creator(new PhoneNumber("+91" + mobile), new PhoneNumber(System.getenv("TWILIO_MOBILE")),
+    		Twilio.init(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    		Message.creator(new PhoneNumber("+91" + mobile), new PhoneNumber(TWILIO_MOBILE),
 					"Hello " + name + " Thanks for creating account your OTP is " + otp).create();
 		} catch (Exception e) {
 			System.err.println("The OTP is : " + otp);

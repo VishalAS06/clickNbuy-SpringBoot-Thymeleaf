@@ -1,12 +1,18 @@
 package com.example.clickNbuy.service.impl;
 import jakarta.servlet.http.HttpSession;
+
+import com.razorpay.RazorpayClient;
+import com.razorpay.RazorpayException;
+import com.razorpay.Utils;
 import java.security.Principal;
 import jakarta.validation.Valid;
 
 import java.time.LocalDateTime;
 import java.util.Random;
 
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.ModelMap;
@@ -16,9 +22,13 @@ import com.example.clickNbuy.dao.UserDao;
 import com.example.clickNbuy.dto.PasswordDto;
 import com.example.clickNbuy.dto.UserDto;
 import com.example.clickNbuy.entity.CartItem;
+import com.example.clickNbuy.entity.Order;
+import com.example.clickNbuy.entity.OrderItem;
 import com.example.clickNbuy.entity.Product;
 import com.example.clickNbuy.entity.User;
 import com.example.clickNbuy.repository.CartItemRepository;
+import com.example.clickNbuy.repository.OrderItemRepository;
+import com.example.clickNbuy.repository.OrderRepository;
 import com.example.clickNbuy.repository.ProductRepository;
 import com.example.clickNbuy.service.UserService;
 import com.example.clickNbuy.util.OtpSender;
@@ -36,12 +46,24 @@ public class UserServiceImpl implements UserService {
 	
 	@Autowired
 	CartItemRepository itemRepository;
+	
+	@Value("${razorpay.keyId}")
+	private String razorpayKeyId;
+
+	@Value("${razorpay.keySecret}")
+	private String razorpayKeySecret;
 
 	@Autowired
 	PasswordEncoder encoder;
 
 	@Autowired
 	OtpSender otpSender;
+	
+	@Autowired
+	OrderItemRepository orderItemRepository;
+
+	@Autowired
+	OrderRepository orderRepository;
 
 	@Override
 	public String registerUser(UserDto userDto, BindingResult result, HttpSession session) {
@@ -219,7 +241,8 @@ public class UserServiceImpl implements UserService {
 				session.removeAttribute("error");
 			}
 			map.put("items", items);
-			map.put("total", items.stream().mapToDouble(x -> x.getProduct().getPrice() * x.getQuantity()).sum());
+			double total = items.stream().mapToDouble(x -> x.getProduct().getPrice() * x.getQuantity()).sum();
+			map.put("total", Math.round(total * 100.0) / 100.0); // Round to 2 decimal places
 			return "cart.html";
 		}
 	}
@@ -257,6 +280,131 @@ public class UserServiceImpl implements UserService {
 			session.setAttribute("success", "Item Decreased Success");
 			return "redirect:/user/cart";
 		}
+	}
+	
+	@Override
+	public String checkout(HttpSession session, Principal principal, ModelMap map) {
+		String email = principal.getName();
+		User user = userDao.findByEmail(email).orElseThrow();
+		List<CartItem> items = itemRepository.findByUser(user);
+		if (items.isEmpty()) {
+			session.setAttribute("error", "No Products in Cart");
+			return "redirect:/";
+		} else {
+			try {
+				double total = items.stream().mapToDouble(x -> x.getProduct().getPrice() * x.getQuantity()).sum();
+				double roundedTotal = Math.round(total * 100.0) / 100.0; // Round to 2 decimal places
+
+				RazorpayClient razorpay = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+				JSONObject orderRequest = new JSONObject();
+				orderRequest.put("amount", (int) (roundedTotal * 100));
+				orderRequest.put("currency", "INR");
+				orderRequest.put("receipt", "order_" + System.currentTimeMillis());
+
+				com.razorpay.Order order = razorpay.orders.create(orderRequest);
+
+				map.put("razorpayOrderId", order.get("id"));
+				map.put("razorpayKeyId", razorpayKeyId);
+				map.put("amount", roundedTotal);
+				map.put("currency", "INR");
+				map.put("userEmail", user.getEmail());
+				map.put("userContact", user.getMobile());
+				map.put("userName", user.getName());
+				map.put("items", items);
+				map.put("user", user);
+				map.put("total", roundedTotal);
+
+				return "checkout.html";
+			} catch (RazorpayException e) {
+				session.setAttribute("error", "Payment initialization failed. Please try again.");
+				return "redirect:/user/cart";
+			}
+		}
+	}
+
+	@Override
+	public String paymentSuccess(String paymentId, String orderId, String signature, String address,
+			Principal principal,
+			HttpSession session, ModelMap map) {
+		try {
+			RazorpayClient razorpay = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+			String data = orderId + "|" + paymentId;
+			boolean isValidSignature = Utils.verifySignature(data, signature, razorpayKeySecret);
+
+			System.out.println("----------2--------------");
+			if (!isValidSignature) {
+				map.put("error", "Payment verification failed!");
+				return "redirect:/checkout";
+			}
+
+			System.out.println("----------3--------------");
+			// Get the current user
+			String email = principal.getName();
+			User user = userDao.findByEmail(email).orElseThrow();
+			if (user == null) {
+				return "redirect:/login";
+			}
+
+			// Create a new order
+			Order order = new Order();
+			order.setUser(user);
+			order.setRazorpayOrderId(orderId);
+			order.setRazorpayPaymentId(paymentId);
+			order.setRazorpaySignature(signature);
+			order.setOrderDate(LocalDateTime.now());
+			order.setStatus("PAID");
+			order.setDeliveryAddress(address);
+
+			// Get cart items and calculate total
+			List<CartItem> cartItems = itemRepository.findByUser(user);
+			double total = 0;
+
+			// Create order items
+			List<OrderItem> orderItems = cartItems.stream()
+				.map(cartItem -> {
+					OrderItem orderItem = new OrderItem();
+					orderItem.setOrder(order);
+					orderItem.setProduct(cartItem.getProduct());
+					orderItem.setQuantity(cartItem.getQuantity());
+					orderItem.setPrice(cartItem.getProduct().getPrice());
+					return orderItem;
+				})
+				.toList();
+			
+			// Calculate total amount
+			double totalAmount = cartItems.stream()
+				.mapToDouble(cartItem -> cartItem.getQuantity() * cartItem.getProduct().getPrice())
+				.sum();
+			
+			// Set the total amount and save the order
+			order.setTotalAmount(totalAmount);
+			orderRepository.save(order);
+			
+			// Save all order items
+			orderItemRepository.saveAll(orderItems);
+
+			// Clear the cart
+			itemRepository.deleteAll(cartItems);
+
+			map.put("success", "Order placed successfully!");
+			return "redirect:/user/orders";
+
+		} catch (RazorpayException e) {
+			map.put("error", "Payment processing failed: " + e.getMessage());
+			return "redirect:/checkout";
+		}
+	}
+
+	@Override
+	public String viewOrders(Principal principal, HttpSession session, ModelMap map) {
+		if (principal == null) {
+			return "redirect:/login";
+		}
+
+		User user = userDao.findByEmail(principal.getName()).orElseThrow();
+		List<Order> orders = orderRepository.findByUser(user);
+		map.put("orders", orders);
+		return "orders";
 	}
 
 }
