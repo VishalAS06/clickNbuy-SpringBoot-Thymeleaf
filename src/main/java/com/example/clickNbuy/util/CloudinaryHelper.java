@@ -18,12 +18,18 @@ public class CloudinaryHelper {
 	String CLOUDINARY_URL;
 
 	public String saveToCloudinary(MultipartFile image) {
-		Cloudinary cloudinary = new Cloudinary(CLOUDINARY_URL);
+		
 		try {
-			return (String) cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap()).get("url");
-		} catch (IOException e) {
+			Cloudinary cloudinary = new Cloudinary(CLOUDINARY_URL);
+			try {
+				return (String) cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap()).get("url");
+			} catch (IOException e) {
+				e.printStackTrace();
+				return null;
+			}
+		} catch (Exception e) {
 			e.printStackTrace();
-			return null;
+			return "https://placehold.co/600x400";
 		}
 	}
 }
